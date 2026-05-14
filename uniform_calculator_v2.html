@@ -1,0 +1,221 @@
+
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校服尺寸計算器</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #34495e;
+            --accent-color: #27ae60;
+            --warning-color: #e67e22;
+            --bg-color: #f8f9fa;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 550px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            box-sizing: border-box;
+        }
+
+        h1 { text-align: center; font-size: 1.4rem; color: var(--primary-color); margin-bottom: 20px; }
+        
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.95rem; }
+        
+        select, input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+
+        #result {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .result-card {
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+        }
+
+        .result-card h4 { margin: 0 0 10px 0; color: var(--secondary-color); border-bottom: 2px solid #eee; padding-bottom: 5px; }
+
+        .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #eee; font-size: 0.95rem; }
+        .row:last-child { border-bottom: none; }
+        .val { font-weight: bold; color: #d35400; }
+        
+        .highlight { color: #27ae60 !important; }
+        .priority-msg { 
+            background: #fff3cd; 
+            color: #856404; 
+            padding: 10px; 
+            border-radius: 6px; 
+            font-size: 0.85rem; 
+            margin-bottom: 15px;
+            border: 1px solid #ffeeba;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>校服尺寸計算器</h1>
+
+    <div class="input-group">
+        <label>學生類別</label>
+        <select id="category">
+            <option value="primary">小學 (通用)</option>
+            <option value="female_sec">中學 (女)</option>
+            <option value="male_sec">中學 (男)</option>
+        </select>
+    </div>
+
+    <div class="input-group">
+        <label>身高 (cm)</label>
+        <input type="number" id="height" placeholder="例如: 155" inputmode="numeric">
+    </div>
+
+    <div class="input-group">
+        <label>腰圍 (吋)</label>
+        <input type="number" id="waist" placeholder="例如: 34" inputmode="numeric">
+    </div>
+
+    <button class="btn" onclick="calculate()">計算建議尺寸</button>
+
+    <div id="result">
+        <div id="msg-area"></div>
+        
+        <div class="result-card" id="height-suggest-card">
+            <h4>按身高建議 (參考值)</h4>
+            <div id="height-results"></div>
+        </div>
+
+        <div class="result-card" id="waist-priority-card" style="display:none;">
+            <h4>⚠️ 腰圍優先建議 (適用尺寸)</h4>
+            <div id="waist-results"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const primaryData = [
+        { h: 115, waist: 19, pants: 12, shirt: "11", tianbao: 26 },
+        { h: 120, waist: 20, pants: 13, shirt: "11/11.5", tianbao: 28 },
+        { h: 125, waist: 22, pants: 14, shirt: "11.5/12", tianbao: 30 },
+        { h: 135, waist: 24, pants: 16, shirt: "12.5", tianbao: 34 },
+        { h: 145, waist: 27, pants: 18, shirt: "13.5", tianbao: 38 },
+        { h: 150, waist: 30, pants: 20, shirt: "14/14.5", tianbao: 40 }
+    ];
+
+    const femaleSecData = [
+        { h: 145, waist: 26, skirt: "S37", short: "36", long: "36" },
+        { h: 150, waist: 28, skirt: "M39", short: "38", long: "38" },
+        { h: 155, waist: 28, skirt: "L41", short: "38", long: "38" },
+        { h: 160, waist: 30, skirt: "XL41", short: "40", long: "40" },
+        { h: 165, waist: 32, skirt: "XL42", short: "42", long: "40/42" },
+        { h: 170, waist: 34, skirt: "XXL42", short: "44", long: "42" }
+    ];
+
+    const maleSecData = [
+        { h: 145, waist: 25, longPants: "36", vest: "35", short: "36", shirt: "13/13.5" },
+        { h: 150, waist: 27, longPants: "38", vest: "37", short: "38", shirt: "14" },
+        { h: 155, waist: 28, longPants: "38", vest: "39", short: "38", shirt: "14.5" },
+        { h: 160, waist: 30, longPants: "40", vest: "39", short: "40", shirt: "14.5" },
+        { h: 165, waist: 32, longPants: "40", vest: "41", short: "42", shirt: "15" }
+    ];
+
+    function findClosest(arr, key, val) {
+        return arr.reduce((prev, curr) => Math.abs(curr[key] - val) < Math.abs(prev[key] - val) ? curr : prev);
+    }
+
+    function calculate() {
+        const cat = document.getElementById('category').value;
+        const h = parseInt(document.getElementById('height').value);
+        const w = parseInt(document.getElementById('waist').value);
+        
+        if (!h || !w) return alert("請輸入完整數據");
+
+        let dataset = (cat === 'primary') ? primaryData : (cat === 'female_sec' ? femaleSecData : maleSecData);
+        let hRow = findClosest(dataset, 'h', h);
+        let wRow = findClosest(dataset, 'waist', w);
+
+        document.getElementById('result').style.display = 'block';
+        
+        // Render Height Suggestions
+        let hHtml = "";
+        if(cat === 'primary') {
+            hHtml += `<div class="row"><span>小學西褲</span><span class="val">${hRow.pants}</span></div>`;
+            hHtml += `<div class="row"><span>校恤</span><span class="val">${hRow.shirt}</span></div>`;
+            hHtml += `<div class="row"><span>天寶尺寸</span><span class="val">${hRow.tianbao}</span></div>`;
+        } else if(cat === 'female_sec') {
+            hHtml += `<div class="row"><span>裙碼</span><span class="val">${hRow.skirt}</span></div>`;
+            hHtml += `<div class="row"><span>運動短褲</span><span class="val">${hRow.short}</span></div>`;
+        } else {
+            hHtml += `<div class="row"><span>運動長褲</span><span class="val">${hRow.longPants}</span></div>`;
+            hHtml += `<div class="row"><span>恤衫領圍</span><span class="val">${hRow.shirt}</span></div>`;
+        }
+        document.getElementById('height-results').innerHTML = hHtml;
+
+        // Check if waist exceeds height proportion
+        const msgArea = document.getElementById('msg-area');
+        const waistCard = document.getElementById('waist-priority-card');
+        
+        if (w > hRow.waist) {
+            msgArea.innerHTML = `<div class="priority-msg">檢測到腰圍 (${w}吋) 超出身高預設比例 (${hRow.waist}吋)，已為您提供腰圍優先方案。</div>`;
+            waistCard.style.display = 'block';
+            let wHtml = "";
+            if(cat === 'primary') {
+                wHtml += `<div class="row"><span>小學西褲 (腰優先)</span><span class="val">${wRow.pants}</span></div>`;
+                wHtml += `<div class="row"><span>天寶尺寸 (腰優先)</span><span class="val">${wRow.tianbao}</span></div>`;
+            } else if(cat === 'female_sec') {
+                wHtml += `<div class="row"><span>裙碼 (腰優先)</span><span class="val">${wRow.skirt}</span></div>`;
+                wHtml += `<div class="row"><span>運動短褲 (腰優先)</span><span class="val">${wRow.short}</span></div>`;
+            } else {
+                wHtml += `<div class="row"><span>運動短褲 (腰優先)</span><span class="val">${wRow.short}</span></div>`;
+            }
+            document.getElementById('waist-results').innerHTML = wHtml;
+        } else {
+            msgArea.innerHTML = "";
+            waistCard.style.display = 'none';
+        }
+    }
+</script>
+
+</body>
+</html>
